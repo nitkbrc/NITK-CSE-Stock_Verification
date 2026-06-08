@@ -1,0 +1,115 @@
+// BRC - Prevent editors from creating, duplicating, or deleting sheets
+// Only owner is allowed
+
+function disable_new_duplicate_delete(e) {
+
+  var ownerEmail = "head.cs@nitk.edu.in";
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var currentUser =
+    Session.getEffectiveUser().getEmail();
+
+
+  // Owner is allowed to modify sheet structure
+  if (currentUser == ownerEmail) {
+
+    saveAllowedSheets();
+    return;
+
+  }
+
+
+  var stored =
+    PropertiesService
+      .getDocumentProperties()
+      .getProperty("allowedSheets");
+
+
+  if (!stored) return;
+
+
+  var allowedSheets = JSON.parse(stored);
+
+
+  var currentSheets =
+    ss.getSheets().map(function(sheet) {
+      return sheet.getName();
+    });
+
+
+
+  // ---------- Prevent CREATE / DUPLICATE ----------
+  if (e.changeType == "INSERT_GRID") {
+
+
+    ss.getSheets().forEach(function(sheet) {
+
+
+      if (!allowedSheets.includes(sheet.getName())) {
+
+
+        if (ss.getSheets().length > 1) {
+
+          ss.deleteSheet(sheet);
+
+        }
+
+      }
+
+    });
+
+  }
+
+
+
+  // ---------- Prevent DELETE ----------
+  if (e.changeType == "REMOVE_GRID") {
+
+
+    allowedSheets.forEach(function(sheetName) {
+
+
+      if (!currentSheets.includes(sheetName)) {
+
+
+        // recreate deleted sheet
+        ss.insertSheet(sheetName);
+
+
+      }
+
+    });
+
+  }
+
+}
+
+
+
+// Run once by owner after creating required sheets
+
+function saveAllowedSheets() {
+
+
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+
+  var names =
+    ss.getSheets()
+      .map(function(sheet){
+
+        return sheet.getName();
+
+      });
+
+
+  PropertiesService
+    .getDocumentProperties()
+    .setProperty(
+      "allowedSheets",
+      JSON.stringify(names)
+    );
+
+}
